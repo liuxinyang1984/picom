@@ -75,10 +75,29 @@ fi
 if [ "$DO_CONFIG" = 1 ]; then
 	conf_dir="${XDG_CONFIG_HOME:-$HOME/.config}/picom"
 	dest="$conf_dir/picom.conf"
-	src="$ROOT/picom.sample.conf"
+	# 优先仓内 picom.conf，否则 sample
+	if [ -f "$ROOT/picom.conf" ]; then
+		src="$ROOT/picom.conf"
+	else
+		src="$ROOT/picom.sample.conf"
+	fi
 	mkdir -p "$conf_dir"
 	if [ -e "$dest" ] || [ -L "$dest" ]; then
-		echo "已有 $dest，跳过 --config"
+		# 若仍链到旧 sample，改为 picom.conf
+		if [ -L "$dest" ] && [ -f "$ROOT/picom.conf" ]; then
+			cur="$(readlink "$dest" 2>/dev/null || true)"
+			case "$cur" in
+			*picom.sample.conf)
+				ln -sfn "$ROOT/picom.conf" "$dest"
+				echo "配置已改链 → $dest"
+				;;
+			*)
+				echo "已有 $dest，跳过 --config"
+				;;
+			esac
+		else
+			echo "已有 $dest，跳过 --config"
+		fi
 	elif [ -f "$src" ]; then
 		ln -s "$src" "$dest"
 		echo "配置 → $dest"
